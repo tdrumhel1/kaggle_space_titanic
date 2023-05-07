@@ -28,7 +28,10 @@ def fill_cryosleep(df):
 def check_pass_group(df,group_num):
     return df[df['PassengerId'].apply(lambda x: str(x[:4]))==group_num]
 
-def basic_prep(df):
+def basic_prep(df,spend_cols):
+    import pandas as pd
+    import numpy as np
+    
     df[['deck', 'number', 'side']] = pd.DataFrame(
         df.Cabin.apply(lambda x: str(x).split('/')).tolist(),
         index= df.index,
@@ -56,7 +59,7 @@ def basic_prep(df):
         pass
     return df
 
-def fill_missing_basic(df, float_cols, object_cols):
+def fill_missing_basic(df, float_cols, object_cols, spend_cols):
     df[spend_cols] = df[spend_cols].fillna(df[spend_cols].mean())
     df[float_cols] = df[float_cols].fillna(df[float_cols].mean().to_dict())
     object_dict = {k:v[0] for k, v in df[object_cols].mode().to_dict().items()}
@@ -90,3 +93,62 @@ def fill_homeplanet(df):
     print(f'{num_nulls} after filling the rest with Earth')
     
     return df
+
+
+def random_null_assignment(df,discrete_variables):
+
+    for variable in discrete_variables:
+        # Getting MISSING indexes to fill with new values
+        missing_indexes = (df[df[variable]=='nan'].index | df[df[variable].isna()].index)
+
+        # Creating new array with counts for each non-missing value
+        non_missing_values = df[df[variable]!='nan'].groupby(by=variable).count()['PassengerId']
+
+        # Setting options to fill missing values with
+        value_options = list(non_missing_values.index)
+
+        # Setting probabilities for random function to assign values
+        value_mix = [x/sum(non_missing_values.values) for x in non_missing_values.values]
+
+        # Creating array of values to populate
+        missing_values = np.random.choice(value_options,len(missing_indexes), p=value_mix)
+
+        # Assign values based on index of missing values and new values array
+        df.loc[missing_indexes,variable] = missing_values
+    
+    return df
+
+def feature_transformation(df):
+
+    cat_df = pd.get_dummies(df[discrete_variables], drop_first=False)
+    
+    # define min max scaler
+    scaler = MinMaxScaler()
+    # transform data
+    num_df = pd.DataFrame(scaler.fit_transform(df[numeric_variables]),columns=numeric_variables)
+    
+    final_df = pd.merge(df,num_df,left_index=True,right_index=True)
+    
+    return final_df
+
+def plot_feature_importance(importance,names,model_type):
+    
+    #Create arrays from feature importance and feature names
+    feature_importance = np.array(importance)
+    feature_names = np.array(names)
+    
+    #Create a DataFrame using a Dictionary
+    data={'feature_names':feature_names,'feature_importance':feature_importance}
+    fi_df = pd.DataFrame(data)
+    
+    #Sort the DataFrame in order decreasing feature importance
+    fi_df.sort_values(by=['feature_importance'], ascending=False,inplace=True)
+    
+    #Define size of bar plot
+    plt.figure(figsize=(10,8))
+    #Plot Searborn bar chart
+    sns.barplot(x=fi_df['feature_importance'], y=fi_df['feature_names'])
+    #Add chart labels
+    plt.title(model_type + ' FEATURE IMPORTANCE')
+    plt.xlabel('FEATURE IMPORTANCE')
+    plt.ylabel('FEATURE NAMES')
