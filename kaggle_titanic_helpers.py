@@ -1,33 +1,3 @@
-def fill_cryosleep(df):
-    
-    num_nulls = df.isna()['CryoSleep'].sum()
-    print(f'{num_nulls} Initially')
-    
-    # Anyone spending money isn't in CryoSleep
-    df.loc[(df['CryoSleep'].isna())&(df['total_spend']>0),['CryoSleep']] = 0
-    num_nulls = df.isna()['CryoSleep'].sum()
-    print(f'{num_nulls} After Step 1: Spending Money = No CryoSleep')
-    
-    # Zero spend for only passenger in group
-    df.loc[(df['CryoSleep'].isna())&(df['num_group_max']==1)&(df['total_spend']==0),['CryoSleep']] = 1
-    num_nulls = df.isna()['CryoSleep'].sum()
-    print(f'{num_nulls} After Step 2: 1 Passenger / Zero Spend = CryoSleep')
-    
-    # Groups with zero total spend
-    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']==0),['CryoSleep']] = 1
-    num_nulls = df.isna()['CryoSleep'].sum()
-    print(f'{num_nulls} After Step 3: Total Group Spend Zero = CryoSleep')
-    
-    # Groups with total spend >0
-    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']>0),['CryoSleep']] = 0
-    num_nulls = df.isna()['CryoSleep'].sum()
-    print(f'{num_nulls} After Step 4: Total Group Spend > Zero = No CryoSleep')
-    
-    return df
-
-def check_pass_group(df,group_num):
-    return df[df['PassengerId'].apply(lambda x: str(x[:4]))==group_num]
-
 def basic_prep(df,spend_cols):
     import pandas as pd
     import numpy as np
@@ -59,11 +29,41 @@ def basic_prep(df,spend_cols):
         pass
     return df
 
+def check_pass_group(df,group_num):
+    return df[df['PassengerId'].apply(lambda x: str(x[:4]))==group_num]
+
 def fill_missing_basic(df, float_cols, object_cols, spend_cols):
     df[spend_cols] = df[spend_cols].fillna(df[spend_cols].mean())
     df[float_cols] = df[float_cols].fillna(df[float_cols].mean().to_dict())
     object_dict = {k:v[0] for k, v in df[object_cols].mode().to_dict().items()}
     df[object_cols] = df[object_cols].fillna(object_dict)
+    return df
+
+def fill_cryosleep(df):
+    
+    num_nulls = df.isna()['CryoSleep'].sum()
+    print(f'{num_nulls} Initially')
+    
+    # Anyone spending money isn't in CryoSleep
+    df.loc[(df['CryoSleep'].isna())&(df['total_spend']>0),['CryoSleep']] = 0
+    num_nulls = df.isna()['CryoSleep'].sum()
+    print(f'{num_nulls} After Step 1: Spending Money = No CryoSleep')
+    
+    # Zero spend for only passenger in group
+    df.loc[(df['CryoSleep'].isna())&(df['num_group_max']==1)&(df['total_spend']==0),['CryoSleep']] = 1
+    num_nulls = df.isna()['CryoSleep'].sum()
+    print(f'{num_nulls} After Step 2: 1 Passenger / Zero Spend = CryoSleep')
+    
+    # Groups with zero total spend
+    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']==0),['CryoSleep']] = 1
+    num_nulls = df.isna()['CryoSleep'].sum()
+    print(f'{num_nulls} After Step 3: Total Group Spend Zero = CryoSleep')
+    
+    # Groups with total spend >0
+    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']>0),['CryoSleep']] = 0
+    num_nulls = df.isna()['CryoSleep'].sum()
+    print(f'{num_nulls} After Step 4: Total Group Spend > Zero = No CryoSleep')
+    
     return df
 
 def fill_homeplanet(df):
@@ -118,8 +118,10 @@ def random_null_assignment(df,discrete_variables):
     
     return df
 
-def feature_transformation(df):
-
+def feature_transformation(df,discrete_variables,numeric_variables):
+    import pandas as pd
+    from sklearn.preprocessing import MinMaxScaler
+    
     cat_df = pd.get_dummies(df[discrete_variables], drop_first=False)
     
     # define min max scaler
@@ -127,7 +129,7 @@ def feature_transformation(df):
     # transform data
     num_df = pd.DataFrame(scaler.fit_transform(df[numeric_variables]),columns=numeric_variables)
     
-    final_df = pd.merge(df,num_df,left_index=True,right_index=True)
+    final_df = pd.merge(cat_df,num_df,left_index=True,right_index=True)
     
     return final_df
 
