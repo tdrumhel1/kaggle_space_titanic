@@ -45,28 +45,28 @@ def fill_cryosleep(df):
     print(f'{num_nulls} Initially')
     
     # Anyone spending money isn't in CryoSleep
-    df.loc[(df['CryoSleep'].isna())&(df['total_spend']>0),['CryoSleep']] = 0
+    df.loc[(df['CryoSleep'].isna())&(df['total_spend']>0),['CryoSleep']] = False
     num_nulls = df.isna()['CryoSleep'].sum()
     print(f'{num_nulls} After Step 1: Spending Money = No CryoSleep')
     
     # Zero spend for only passenger in group
-    df.loc[(df['CryoSleep'].isna())&(df['num_group_max']==1)&(df['total_spend']==0),['CryoSleep']] = 1
+    df.loc[(df['CryoSleep'].isna())&(df['num_group_max']==1)&(df['total_spend']==0),['CryoSleep']] = True
     num_nulls = df.isna()['CryoSleep'].sum()
     print(f'{num_nulls} After Step 2: 1 Passenger / Zero Spend = CryoSleep')
     
     # Groups with zero total spend
-    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']==0),['CryoSleep']] = 1
+    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']==0),['CryoSleep']] = True
     num_nulls = df.isna()['CryoSleep'].sum()
     print(f'{num_nulls} After Step 3: Total Group Spend Zero = CryoSleep')
     
     # Groups with total spend >0
-    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']>0),['CryoSleep']] = 0
+    df.loc[(df['CryoSleep'].isna())&(df['total_spend_max']>0),['CryoSleep']] = False
     num_nulls = df.isna()['CryoSleep'].sum()
     print(f'{num_nulls} After Step 4: Total Group Spend > Zero = No CryoSleep')
     
     return df
 
-def fill_homeplanet(df):
+def fill_homeplanet(df,final_fill='Y'):
     
     num_nulls = df.isna()['HomePlanet'].sum()
     print(f'{num_nulls} Initially')
@@ -87,9 +87,13 @@ def fill_homeplanet(df):
     num_nulls = df.isna()['HomePlanet'].sum()
     print(f'{num_nulls} after filling Earth decks')
     
-    # Filling the rest with Earth
-    df.loc[(df['HomePlanet'].isna()),['HomePlanet']] = 'Earth'
-    num_nulls = df.isna()['HomePlanet'].sum()
+    if final_fill == 'Y':
+        # Filling the rest with Earth
+        df.loc[(df['HomePlanet'].isna()),['HomePlanet']] = 'Earth'
+        num_nulls = df.isna()['HomePlanet'].sum()
+    else:
+        pass
+
     print(f'{num_nulls} after filling the rest with Earth')
     
     return df
